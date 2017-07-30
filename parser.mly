@@ -27,41 +27,53 @@ DEALINGS IN THE SOFTWARE.
 
 *)
 
-open Graph_ast
 open Support.Error
 open Support.Pervasive
+open Ast
 exception ParseError
 %}
 %token <int Support.Error.withinfo> INT 
+%token <float Support.Error.withinfo> FLOAT 
 %token <string Support.Error.withinfo> STRING 
 %token <string Support.Error.withinfo> NAME
 
 %token <Support.Error.info> INTTY
 %token <Support.Error.info> BOOLTY
+%token <Support.Error.info> FLOATTY
 %token <Support.Error.info> TRUE
 %token <Support.Error.info> FALSE
 %token <Support.Error.info> QMARK
 %token <Support.Error.info> LPAREN
 %token <Support.Error.info> RPAREN
+%token <Support.Error.info> LBRACK
+%token <Support.Error.info> RBRACK
+%token <Support.Error.info> LT
+%token <Support.Error.info> GT
 %token <Support.Error.info> EOL
 %token <Support.Error.info> EOF
 
 %token <Support.Error.info> LAMBDA
 %token <Support.Error.info> DOT
+%token <Support.Error.info> COMMA
 %token <Support.Error.info> EQUAL
+%token <Support.Error.info> ARRAY
 %token <Support.Error.info> LET
+%token <Support.Error.info> BE
 %token <Support.Error.info> IN
 %token <Support.Error.info> COLON
 %token <Support.Error.info> ARROW
+%token <Support.Error.info> AMP
+%token <Support.Error.info> BAR
 
 %nonassoc simple_prec
-%nonassoc LAMBDA DOT 
+%nonassoc LAMBDA DOT COMMA
 %left COLON
 %right ARROW
 %nonassoc INT LPAREN NAME 
 %start main             /* the entry point */
-%type <Graph_ast.expr> main
-%type <Graph_ast.expr> expr
+%type <Ast.expr> main
+%type <Ast.expr> expr
+%type <Ast.ty> typ
   %%
 main:
   expr EOF         { $1 }
@@ -69,11 +81,13 @@ main:
 
 typ:
   LPAREN typ RPAREN                    { $2 }
-| INTTY                                { create_int $1 }
-| BOOLTY                               { create_bool $1 }
-| QMARK                                { create_shared_dyn $1 }
-| typ ARROW typ                        { create_arrow $2 $1 $3 }
-| NAME                                 { create_var $1.i $1.v }
+| INTTY                                { IntT $1 }
+| BOOLTY                               { BoolT $1 }
+| FLOATTY                              { FloatT $1 }
+| typ ARROW typ                        { ArrowT ($2, $1, $3) }
+| NAME                                 { VarT ($1.i, $1.v) }
+| LBRACK typ RBRACK                    { ArrayT ($1, $2) }
+| LT NAME GT typ                       { AllT ($1, $2.v, $4) }
 ;
 opt_typ:
  { None }
@@ -82,15 +96,12 @@ opt_typ:
 simple_expr:
   NAME           { VarE ($1.i, $1.v) }
 | INT            { IntE ($1.i, $1.v) }
+| FLOAT          { FloatE ($1.i, $1.v) }
 | TRUE           { BoolE ($1, true) }
 | FALSE           { BoolE ($1, false) }
 | LPAREN expr RPAREN { $2 }
-| LET NAME opt_typ EQUAL expr IN expr {
-  let t = 
-    (match $3 with
-	None -> create_dyn $1
-      | Some t -> t) in
-    AppE ($1, LamE ($1, $2.v, t, $7), $5)
+| LET NAME COLON typ BE expr IN expr {
+    AppE ($1, LamE ($1, $2.v, $4, $8), $6)
 }
 ;
 expr:
@@ -107,13 +118,7 @@ expr:
 	      | _ -> error UNKNOWN "parser: bad application"
 	  in loop (List.rev ls)
   }
-| LAMBDA NAME opt_typ DOT expr { 
-  let t = 
-    (match $3 with
-	None -> create_dyn $1
-      | Some t -> t) in
-    LamE ($1, $2.v, t, $5)
-}
+| LAMBDA NAME typ DOT expr { LamE ($1, $2.v, $3, $5) }
 ;
 simple_expr_list:
   simple_expr %prec simple_prec { [$1] }

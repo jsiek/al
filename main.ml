@@ -38,12 +38,6 @@ let _ =
   let inFile = parseArgs() in
   let _ = Filename.chop_extension inFile in
   let e = parseFile inFile in
-    printf "expression: %s\n" (Graph_ast.print_expr e);
-  let t = infer e in
-    printf "**Graph_ast**\n" ;
-    printf "type: %s\n" (print_node t) ;
-    printf "expression: %s\n" (Graph_ast.print_expr e) ;
-    printf "\n" ;
-    cast_stage e
+    ()
 
 

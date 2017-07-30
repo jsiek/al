@@ -28,7 +28,6 @@ DEALINGS IN THE SOFTWARE.
 
 open Support.Pervasive
 open Support.Error
-open Graph_ast 
 
 let searchpath = ref [""]
 

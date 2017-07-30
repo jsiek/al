@@ -35,14 +35,21 @@ let reservedWords = [
   ("fun", fun i -> LAMBDA i);
   ("true", fun i -> TRUE i);
   ("false", fun i -> FALSE i);
+  ("array", fun i -> ARRAY i);
   ("let", fun i -> LET i);
   ("in", fun i -> IN i);
+  ("be", fun i -> BE i);
   ("(", fun i -> LPAREN i);  
   (")", fun i -> RPAREN i);  
+  ("[", fun i -> LBRACK i);  
+  ("]", fun i -> RBRACK i);  
+  ("<", fun i -> LT i);  
+  (">", fun i -> GT i);  
   (":", fun i -> COLON i);  
-  ("=", fun i -> EQUAL i);  
   (".", fun i -> DOT i);  
-  ("?", fun i -> QMARK i);  
+  (",", fun i -> COMMA i);  
+  ("&", fun i -> AMP i);  
+  ("|", fun i -> BAR i);  
   ("->", fun i -> ARROW i);
 ]
 
@@ -133,6 +140,9 @@ rule main = parse
 | ['0'-'9']+
     { INT{i=info lexbuf; v=int_of_string (text lexbuf)} }
 
+| ['0'-'9']+ "." ['0'-'9']+
+    { FLOAT{i=info lexbuf; v=float_of_string (text lexbuf)} }
+
 | ['A'-'Z' 'a'-'z' '_' '\\']
   ['A'-'Z' 'a'-'z' '_' '0'-'9' '\'']*
     { createID (info lexbuf) (text lexbuf) }
@@ -144,10 +154,13 @@ rule main = parse
 | "~"
 | "_"
 | "@"
+| "and"
+| "or"
+| "not"
 | "++" | "--" 
 | "+="
 | "+" | "-" | "*" | "/" | "%" | "!" | "==" | "!=" | "=" 
-| "<<" | "<" | "<=" | ">>" | ">" | ">="
+| "<<" | "<=" | ">>" | ">="
 | "|" | "(" | ")" | "{" | "}" | "[" | "]" | ";" | ":" | "," | "..." | "." | "&"
     { createID (info lexbuf) (text lexbuf) }
 
