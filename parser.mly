@@ -47,12 +47,18 @@ exception ParseError
 %token <Support.Error.info> RPAREN
 %token <Support.Error.info> LBRACK
 %token <Support.Error.info> RBRACK
+%token <Support.Error.info> LBRACE
+%token <Support.Error.info> RBRACE
 %token <Support.Error.info> LT
 %token <Support.Error.info> GT
 %token <Support.Error.info> EOL
 %token <Support.Error.info> EOF
 
 %token <Support.Error.info> LAMBDA
+%token <Support.Error.info> TAG
+%token <Support.Error.info> CASE
+%token <Support.Error.info> OF
+%token <Support.Error.info> HANDLE
 %token <Support.Error.info> DOT
 %token <Support.Error.info> COMMA
 %token <Support.Error.info> EQUAL
@@ -70,13 +76,14 @@ exception ParseError
 %token <Support.Error.info> IN
 %token <Support.Error.info> COLON
 %token <Support.Error.info> ARROW
+%token <Support.Error.info> DUBARROW
 %token <Support.Error.info> AMP
 %token <Support.Error.info> BAR
 
 %nonassoc simple_prec
 %nonassoc LAMBDA DOT COMMA
 %left COLON
-%right ARROW
+%right ARROW DUBARROW
 %nonassoc INT LPAREN NAME 
 %start main             /* the entry point */
 %type <Ast.expr> main
@@ -92,42 +99,56 @@ typ:
 | INTTY                                { IntT $1 }
 | BOOLTY                               { BoolT $1 }
 | FLOATTY                              { FloatT $1 }
-| typ ARROW typ                        { ArrowT ($2, $1, $3) }
+| LAMBDA typ_list ARROW typ            { ArrowT ($1, $2, $4) }
+| HANDLE field_typ_list DUBARROW typ   { HandleT ($1, $2, $4) }
 | NAME                                 { VarT ($1.i, $1.v) }
 | LBRACK typ RBRACK                    { ArrayT ($1, $2) }
 | LT NAME GT typ                       { AllT ($1, $2.v, $4) }
+;
+typ_list:
+  typ                                  { [$1] }
+| typ COMMA typ_list                   { $1::$3 }
+;
+field_typ:
+  NAME COLON typ                       { ($1.v,$3) }
+;
+field_typ_list:
+  field_typ                            { [$1] }
+| field_typ COMMA field_typ_list       { $1::$3 }
 ;
 simple_expr:
   NAME           { VarE ($1.i, $1.v) }
 | INT            { IntE ($1.i, $1.v) }
 | TRUE           { BoolE ($1, true) }
-| FALSE           { BoolE ($1, false) }
+| FALSE          { BoolE ($1, false) }
 | FLOAT          { FloatE ($1.i, $1.v) }
+| STRING         { StringE ($1.i, $1.v) }
 | LPAREN expr RPAREN { $2 }
 | ARRAY expr LBRACK expr RBRACK      { ArrayE ($1, $2, $4) }
 | NOT expr { PrimAppE ($1, "not", [$2]) }
 | LAMBDA NAME typ DOT expr { LamE ($1, $2.v, $3, $5) }
+| LBRACE member_list RBRACE { RecordE ($1, $2) }
+| TAG NAME expr { VariantE ($1, $2.v, $3) }
+| CASE expr OF expr { CaseE ($1, $2, $4) }
+| COLON NAME expr { HandleE ($1, $2.v, $3) }
 | LET NAME COLON typ BE expr IN expr {
-    AppE ($1, LamE ($1, $2.v, $4, $8), $6)
+    AppE ($1, LamE ($1, $2.v, $4, $8), [$6])
 }
 ;
 expr:
-  simple_expr_list                 {
-    match $1 with
-	[a] -> a
-      | ls ->
-	  let rec loop ls =
-	    match ls with
-		[a] -> a
-	      | rand::ls ->
-		  let rator = loop ls in
-		  AppE (get_expr_info rand, rator, rand)
-	      | _ -> error UNKNOWN "parser: bad application"
-	  in loop (List.rev ls)
-  }
+  simple_expr LPAREN expr_list RPAREN       { AppE ($2, $1, $3) }
+| simple_expr BAR expr                      { JoinE ($2, $1, $3) }
 | simple_expr LBRACK expr RBRACK            { IndexE ($2, $1, $3) }
+| simple_expr DOT NAME                      { MemberE ($2, $1, $3.v) }
 ;
-simple_expr_list:
-  simple_expr %prec simple_prec { [$1] }
-| simple_expr simple_expr_list { $1::$2 }
+expr_list:
+  expr { [$1] }
+| expr COMMA expr_list { $1::$3 }
+;
+member:
+  NAME EQUAL expr { ($1.v,$3) }
+;
+member_list:
+ member                    { [$1] }
+| member COMMA member_list { $1::$3 } 
 ;

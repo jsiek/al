@@ -33,6 +33,10 @@ let reservedWords = [
   ("int", fun i -> INTTY i);
   ("bool", fun i -> BOOLTY i);
   ("fun", fun i -> LAMBDA i);
+  ("case", fun i -> CASE i);
+  ("of", fun i -> OF i);
+  ("tag", fun i -> TAG i);
+  ("handle", fun i -> HANDLE i);
   ("true", fun i -> TRUE i);
   ("false", fun i -> FALSE i);
   ("array", fun i -> ARRAY i);
@@ -43,6 +47,8 @@ let reservedWords = [
   (")", fun i -> RPAREN i);  
   ("[", fun i -> LBRACK i);  
   ("]", fun i -> RBRACK i);  
+  ("{", fun i -> LBRACE i);  
+  ("}", fun i -> RBRACE i);  
   ("<", fun i -> LT i);  
   (">", fun i -> GT i);  
   (":", fun i -> COLON i);  
@@ -58,6 +64,7 @@ let reservedWords = [
   ("*", fun i -> MULT i);  
   ("/", fun i -> DIV i);
   ("->", fun i -> ARROW i);
+  ("=>", fun i -> DUBARROW i);
 ]
 
 (* Support functions *)
