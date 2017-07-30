@@ -13,10 +13,8 @@ type ty =
   | ArrowT of info * ty list * ty
   | InterT of info * ty * ty
   | AllT of info * string * ty
-  | RecordT of info * (string * ty) list
-  | VariantT of info * (string * ty) list
-  | HandleT of info * (string * ty) list * ty
-  | RecursiveT of info * string * string * ty
+  | StructT of info * string
+  | UnionT of info * string
 
 type expr =
   | VarE of info * string
@@ -26,16 +24,21 @@ type expr =
   | FloatE of info * float
   | ArrayE of info * expr * expr     (* Array creation *)
   | IndexE of info * expr * expr     (* Indexing into an array *)
-  | LamE of info * string * ty * expr
+  | LetE of info * string * expr * expr
+  | LamE of info * (string * ty) list * expr
   | AppE of info * expr * expr list
   | PrimAppE of info * string * expr list
   | AbsE of info * string list * expr
-  | RecordE of info * (string * expr) list
-  | VariantE of info * string * expr
-  | MemberE of info * expr * string  (* Record field access *)
-  | CaseE of info * expr * expr      (* Case on variant *)
-  | JoinE of info * expr * expr
-  | HandleE of info * string * expr
+  | StructE of info * string * (string * expr) list
+  | UnionE of info * string * (string * expr)
+  | MemberE of info * expr * string  (* struct field access *)
+  | CaseE of info * expr * (string * expr) list (* Case on union *)
+  | IfE of info * expr * expr * expr
+
+type decl =
+  | FunD of info * string * (string * ty) list * ty * expr
+  | StructD of info * string * (string * ty) list
+  | UnionD of info * string * (string * ty) list
 
 let rec print_ty t =
   match t with
@@ -50,17 +53,11 @@ let rec print_ty t =
     | StringT (i) -> "string"
     | ArrayT (i, t) -> sprintf "[%s]" (print_ty t)
     | InterT (i, s, t) -> String.concat " & " [print_ty s; print_ty t]
-    | RecordT (i, fs) -> 
-      String.concat ", " (map print_field fs)
-    | VariantT (i, fs) ->
-      String.concat " | " (map print_field fs)
-    | HandleT (i, fs, rt) ->
-      sprintf "handle %s => %s"
-        (String.concat " | " (map print_field fs))
-        (print_ty rt)
+    | StructT (i, n) -> sprintf "struct %s" n
+    | UnionT (i, n) -> sprintf "union %s" n
     | AllT (i, alpha, t) ->
       sprintf "<%s> %s" alpha (print_ty t)
-    | RecursiveT (i, n, x, t) -> n
+
 
 and print_field (n,t) = sprintf "%s: %s" n (print_ty t)
 
@@ -75,8 +72,11 @@ let rec print_expr e =
       sprintf "array %s [%s]" (print_expr len) (print_expr ini)
     | IndexE (i, arr, ind) ->
       sprintf "%s[%s]" (print_expr arr) (print_expr ind)
-    | LamE (i, x, t, e) -> 
-	sprintf "(fun %s : %s. %s)" x (print_ty t) (print_expr e)
+    | LamE (i, ps, e) -> 
+	sprintf "(fun %s. %s)" 
+           (String.concat ", "
+              (map (fun (n,t) -> sprintf "%s : %s" n (print_ty t)) ps))
+           (print_expr e)
     | AppE (i, e, es) ->
 	sprintf "%s(%s)" (print_expr e)
                          (String.concat ", " (map print_expr es))
@@ -84,26 +84,30 @@ let rec print_expr e =
       sprintf "%s(%s)" opr (String.concat ", " (map print_expr es))
     | AbsE (i, alphas, e) ->
       sprintf "<%s> %s" (String.concat ", " alphas) (print_expr e)
-    | RecordE (i, ms) ->
-      sprintf "{ %s }" (String.concat ", " (map print_member ms))
+    | StructE (i, n, ms) ->
+      sprintf "struct %s { %s }" n (String.concat ", " (map print_member ms))
     | MemberE (i, e, mem) ->
       sprintf "%s.%s" (print_expr e) mem
-    | VariantE (i, f, e) ->
-      sprintf "tag %s %s" f (print_expr e)
-    | CaseE (i, e, h) ->
-      sprintf "case %s of %s" (print_expr e) (print_expr h)
-    | JoinE (i, l, r) ->
-      sprintf "%s | %s" (print_expr l) (print_expr r)
-    | HandleE (i, f, e) ->
-      sprintf ":%s %s" f (print_expr e)
+    | UnionE (i, n, (f, e)) ->
+      sprintf "union %s { %s=%s }" n f (print_expr e)
+    | CaseE (i, e, cs) ->
+      sprintf "case %s of %s" (print_expr e) 
+         (String.concat " | " (map print_case cs))
+    | IfE (i, cnd, thn, els) ->
+      sprintf "if %s then %s else %s" (print_expr cnd) (print_expr thn)
+        (print_expr els)
+
 and print_member (f,e) =
       sprintf "%s=%s" f (print_expr e)
+
+and print_case (f,e) =
+      sprintf "%s=>%s" f (print_expr e)
 
 let get_info t = 
   (match t with
       ArrowT (i,_,_) | IntT i | VarT (i,_) | BoolT i | FloatT i
-    | InterT (i,_,_) | AllT (i,_,_) | RecordT (i,_) | VariantT (i,_)
-    | RecursiveT (i,_,_,_) | HandleT (i, _, _) | StringT i | ArrayT (i, _)
+    | InterT (i,_,_) | AllT (i,_,_) | StructT (i,_) | UnionT (i,_)
+    | StringT i | ArrayT (i, _)
 	-> i)
 
 let get_expr_info e =
@@ -111,7 +115,7 @@ let get_expr_info e =
      VarE (i,_)
     | IntE (i,_)
     | BoolE (i,_)
-    | LamE (i,_,_,_)
+    | LamE (i,_,_)
     | AbsE (i,_,_)
     | AppE (i,_,_) 
     | PrimAppE (i,_,_) 
@@ -121,10 +125,9 @@ let get_expr_info e =
     | FloatE (i, _)
     | MemberE (i, _, _)
     | CaseE (i, _, _)
-    | JoinE (i, _, _)
-    | HandleE (i, _, _)
-    | RecordE (i, _)
-    | VariantE (i, _, _)
+    | StructE (i, _, _)
+    | UnionE (i, _, _)
+    | IfE (i, _, _, _)
     -> i
 
 let rec type_vars t =

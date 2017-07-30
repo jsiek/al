@@ -40,6 +40,8 @@ exception ParseError
 %token <Support.Error.info> INTTY
 %token <Support.Error.info> BOOLTY
 %token <Support.Error.info> FLOATTY
+%token <Support.Error.info> STRUCT
+%token <Support.Error.info> UNION
 %token <Support.Error.info> TRUE
 %token <Support.Error.info> FALSE
 %token <Support.Error.info> QMARK
@@ -65,16 +67,18 @@ exception ParseError
 %token <Support.Error.info> NOT
 %token <Support.Error.info> AND
 %token <Support.Error.info> OR
+%token <Support.Error.info> IF
+%token <Support.Error.info> THEN
+%token <Support.Error.info> ELSE
 %token <Support.Error.info> PLUS
 %token <Support.Error.info> NEG
 %token <Support.Error.info> MINUS
 %token <Support.Error.info> MULT
 %token <Support.Error.info> DIV
 %token <Support.Error.info> ARRAY
-%token <Support.Error.info> LET
-%token <Support.Error.info> BE
-%token <Support.Error.info> IN
+%token <Support.Error.info> ASSIGN
 %token <Support.Error.info> COLON
+%token <Support.Error.info> SEMICOLON
 %token <Support.Error.info> ARROW
 %token <Support.Error.info> DUBARROW
 %token <Support.Error.info> AMP
@@ -82,16 +86,17 @@ exception ParseError
 
 %nonassoc simple_prec
 %nonassoc LAMBDA DOT COMMA
-%left COLON
+%left COLON SEMICOLON
 %right ARROW DUBARROW
 %nonassoc INT LPAREN NAME 
 %start main             /* the entry point */
-%type <Ast.expr> main
+%type <Ast.decl list * Ast.expr> main
 %type <Ast.expr> expr
+%type <Ast.decl> decl
 %type <Ast.ty> typ
   %%
 main:
-  expr EOF         { $1 }
+  decl_list expr EOF         { ($1,$2) }
   ;
 
 typ:
@@ -100,8 +105,9 @@ typ:
 | BOOLTY                               { BoolT $1 }
 | FLOATTY                              { FloatT $1 }
 | LAMBDA typ_list ARROW typ            { ArrowT ($1, $2, $4) }
-| HANDLE field_typ_list DUBARROW typ   { HandleT ($1, $2, $4) }
 | NAME                                 { VarT ($1.i, $1.v) }
+| STRUCT NAME                          { StructT ($1, $2.v) }
+| UNION NAME                           { UnionT ($1, $2.v) }
 | LBRACK typ RBRACK                    { ArrayT ($1, $2) }
 | LT NAME GT typ                       { AllT ($1, $2.v, $4) }
 ;
@@ -109,12 +115,12 @@ typ_list:
   typ                                  { [$1] }
 | typ COMMA typ_list                   { $1::$3 }
 ;
-field_typ:
+name_typ:
   NAME COLON typ                       { ($1.v,$3) }
 ;
-field_typ_list:
-  field_typ                            { [$1] }
-| field_typ COMMA field_typ_list       { $1::$3 }
+name_typ_list:
+  name_typ                            { [$1] }
+| name_typ COMMA name_typ_list       { $1::$3 }
 ;
 simple_expr:
   NAME           { VarE ($1.i, $1.v) }
@@ -123,21 +129,17 @@ simple_expr:
 | FALSE          { BoolE ($1, false) }
 | FLOAT          { FloatE ($1.i, $1.v) }
 | STRING         { StringE ($1.i, $1.v) }
-| LPAREN expr RPAREN { $2 }
-| ARRAY expr LBRACK expr RBRACK      { ArrayE ($1, $2, $4) }
-| NOT expr { PrimAppE ($1, "not", [$2]) }
-| LAMBDA NAME typ DOT expr { LamE ($1, $2.v, $3, $5) }
-| LBRACE member_list RBRACE { RecordE ($1, $2) }
-| TAG NAME expr { VariantE ($1, $2.v, $3) }
-| CASE expr OF expr { CaseE ($1, $2, $4) }
-| COLON NAME expr { HandleE ($1, $2.v, $3) }
-| LET NAME COLON typ BE expr IN expr {
-    AppE ($1, LamE ($1, $2.v, $4, $8), [$6])
-}
+| LPAREN expr RPAREN               { $2 }
+| ARRAY expr LBRACK expr RBRACK    { ArrayE ($1, $2, $4) }
+| NOT expr                         { PrimAppE ($1, "not", [$2]) }
+| LAMBDA name_typ_list DOT expr    { LamE ($1, $2, $4) }
+| STRUCT NAME LBRACE member_list RBRACE { StructE ($1, $2.v, $4) }
+| UNION NAME LBRACE member RBRACE  { UnionE ($1, $2.v, $4) }
+| CASE expr OF case_list           { CaseE ($1, $2, $4) }
+| NAME ASSIGN expr SEMICOLON expr  { LetE ($1.i, $1.v, $3, $5) }
 ;
 expr:
   simple_expr LPAREN expr_list RPAREN       { AppE ($2, $1, $3) }
-| simple_expr BAR expr                      { JoinE ($2, $1, $3) }
 | simple_expr LBRACK expr RBRACK            { IndexE ($2, $1, $3) }
 | simple_expr DOT NAME                      { MemberE ($2, $1, $3.v) }
 ;
@@ -145,10 +147,25 @@ expr_list:
   expr { [$1] }
 | expr COMMA expr_list { $1::$3 }
 ;
+case:
+  NAME DUBARROW expr { ($1.v,$3) }
+;
+case_list:
+  case { [$1] }
+| case BAR case_list { $1::$3 }
+;
 member:
   NAME EQUAL expr { ($1.v,$3) }
 ;
 member_list:
  member                    { [$1] }
 | member COMMA member_list { $1::$3 } 
+;
+decl:
+LAMBDA NAME LPAREN name_typ_list RPAREN typ COLON expr
+  { FunD ($1, $2.v, $4, $6, $8) }
+;
+decl_list:
+  decl { [$1] }
+| decl decl_list { $1::$2 }
 ;
