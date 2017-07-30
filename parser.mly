@@ -56,6 +56,14 @@ exception ParseError
 %token <Support.Error.info> DOT
 %token <Support.Error.info> COMMA
 %token <Support.Error.info> EQUAL
+%token <Support.Error.info> NOT
+%token <Support.Error.info> AND
+%token <Support.Error.info> OR
+%token <Support.Error.info> PLUS
+%token <Support.Error.info> NEG
+%token <Support.Error.info> MINUS
+%token <Support.Error.info> MULT
+%token <Support.Error.info> DIV
 %token <Support.Error.info> ARRAY
 %token <Support.Error.info> LET
 %token <Support.Error.info> BE
@@ -89,17 +97,16 @@ typ:
 | LBRACK typ RBRACK                    { ArrayT ($1, $2) }
 | LT NAME GT typ                       { AllT ($1, $2.v, $4) }
 ;
-opt_typ:
- { None }
-| COLON typ { Some $2 }
-;
 simple_expr:
   NAME           { VarE ($1.i, $1.v) }
 | INT            { IntE ($1.i, $1.v) }
-| FLOAT          { FloatE ($1.i, $1.v) }
 | TRUE           { BoolE ($1, true) }
 | FALSE           { BoolE ($1, false) }
+| FLOAT          { FloatE ($1.i, $1.v) }
 | LPAREN expr RPAREN { $2 }
+| ARRAY expr LBRACK expr RBRACK      { ArrayE ($1, $2, $4) }
+| NOT expr { PrimAppE ($1, "not", [$2]) }
+| LAMBDA NAME typ DOT expr { LamE ($1, $2.v, $3, $5) }
 | LET NAME COLON typ BE expr IN expr {
     AppE ($1, LamE ($1, $2.v, $4, $8), $6)
 }
@@ -118,7 +125,7 @@ expr:
 	      | _ -> error UNKNOWN "parser: bad application"
 	  in loop (List.rev ls)
   }
-| LAMBDA NAME typ DOT expr { LamE ($1, $2.v, $3, $5) }
+| simple_expr LBRACK expr RBRACK            { IndexE ($2, $1, $3) }
 ;
 simple_expr_list:
   simple_expr %prec simple_prec { [$1] }

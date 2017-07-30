@@ -37,7 +37,7 @@ open Format
 let _ =
   let inFile = parseArgs() in
   let _ = Filename.chop_extension inFile in
-  let e = parseFile inFile in
+  let _ = parseFile inFile in
     ()
 
 

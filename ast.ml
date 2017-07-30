@@ -54,7 +54,7 @@ let rec print_expr e =
     | BoolE (i,n) -> sprintf "%b" n
     | FloatE (i,f) -> sprintf "%f" f
     | ArrayE (i,len,ini) ->
-      sprintf "array[%s](%s)" (print_expr len) (print_expr ini)
+      sprintf "array %s [%s]" (print_expr len) (print_expr ini)
     | LamE (i, x, t, e) -> 
 	sprintf "(fun %s : %s. %s)" x (print_ty t) (print_expr e)
     | AppE (i, e1, e2) ->
