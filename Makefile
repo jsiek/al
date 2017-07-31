@@ -21,7 +21,8 @@ MLSOURCES	= list_set.ml \
 		  ast.ml \
 		  $(YSOURCES) $(LSOURCES) \
 		  parser_misc.ml \
-		  cir.ml 
+		  cir.ml \
+		  lower.ml
 
 MLOBJECTS	= $(MLSOURCES:.ml=.$(MLC_OUT)) 
 MLHDROBJ	= $(MLHEADERS:.mli=.cmi)

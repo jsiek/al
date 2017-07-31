@@ -1,7 +1,7 @@
 %{
 (*
 
-Copyright Jeremy Siek and Manish Vachharajani, November 11, 2007
+Copyright Jeremy G. Siek, July 30, 2017
 
 Permission is hereby granted, free of charge, to any person or organization
 obtaining a copy of the software and accompanying documentation covered by

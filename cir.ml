@@ -38,7 +38,7 @@ type decl =
 let rec print_ty t =
   match t with
       StructT (i, s) -> 
-        sprintf "struct %s" s
+        sprintf "struct %s*" s
     | FunPtrT (i, ps, rt) -> 
 	sprintf "%s (*)(%s)" 
 	(print_ty rt)
@@ -102,7 +102,7 @@ let print_decl d =
   | UnionD (i, n, fs) ->
     let enum = sprintf "enum %s_tag { %s };" n
       (String.concat ", " (map (fun (n,t) -> sprintf "tag_%s" n) fs)) in
-    let strct = sprintf "struct %s {\n%s\n};" n
+    let strct = sprintf "struct %s {\n %s_tag tag; union { %s } u; \n};" n n
       (String.concat "\n" (map print_var_decl fs)) in
     String.concat "\n" [enum;strct]
 
