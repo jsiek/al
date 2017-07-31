@@ -8,6 +8,7 @@ type ty =
   | IntT of info
   | CharT of info
   | FloatT of info
+  | VoidT of info
   | PtrT of info * ty
   | FunPtrT of info * ty list * ty
 
@@ -21,9 +22,10 @@ type expr =
   | AppE of info * expr * expr list
   | PrimAppE of info * string * expr list
   | MemberE of info * expr * string  (* Struct field access *)
+  | DerefE of info * expr            (* Pointer dereference *)
 
 type stmt = 
-   | AssignS of info * string * expr
+   | AssignS of info * expr * expr
    | ReturnS of info * expr
    | IfS of info * expr * stmt * stmt
    | BlockS of info * stmt list
@@ -38,14 +40,15 @@ type decl =
 let rec print_ty t =
   match t with
       StructT (i, s) -> 
-        sprintf "struct %s*" s
+        sprintf "%s" s
     | FunPtrT (i, ps, rt) -> 
 	sprintf "%s (*)(%s)" 
 	(print_ty rt)
 	(String.concat ", " (map print_ty ps)) 
-    | IntT (i) -> "int"
-    | FloatT (i) -> "float"
-    | CharT (i) -> "char"
+    | IntT i -> "int"
+    | FloatT i -> "float"
+    | CharT i -> "char"
+    | VoidT i -> "void"
     | PtrT (i, t) -> sprintf "%s*" (print_ty t)
 
 let rec print_expr e =
@@ -64,11 +67,13 @@ let rec print_expr e =
       sprintf "%s(%s)" opr (String.concat ", " (map print_expr es))
     | MemberE (i, e, mem) ->
       sprintf "%s.%s" (print_expr e) mem
+    | DerefE (i, e) ->
+      sprintf "(*%s)" (print_expr e)
 
 let rec print_stmt s =
   match s with
     | AssignS (i, lhs, rhs) ->
-       sprintf "%s = %s;" lhs (print_expr rhs)
+       sprintf "%s = %s;" (print_expr lhs) (print_expr rhs)
     | ReturnS (i, e) ->
        sprintf "return %s;" (print_expr e)
     | IfS (i, cnd, thn, els) ->
@@ -97,8 +102,9 @@ let print_decl d =
         (String.concat "\n" (map print_var_decl locals))
         (String.concat "\n" (map print_stmt body))
   | StructD (i, n, fs) ->
-    sprintf "struct %s {\n%s\n};" n
-      (String.concat "\n" (map print_var_decl fs))
+    sprintf "typedef struct {\n%s\n} %s;" 
+      (String.concat "\n" (map print_var_decl fs)) 
+      n
   | UnionD (i, n, fs) ->
     let enum = sprintf "enum %s_tag { %s };" n
       (String.concat ", " (map (fun (n,t) -> sprintf "tag_%s" n) fs)) in

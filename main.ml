@@ -33,11 +33,18 @@ open Printf
 open Unix
 open Parser_misc
 open Format
+open Lower
+open Cir
 
 let _ =
   let inFile = parseArgs() in
   let _ = Filename.chop_extension inFile in
-  let _ = parseFile inFile in
-    ()
+  let p = parseFile inFile in
+  let ds = lower_program p in
+    print_endline "#include <stdlib.h>";
+    print_endline "#include <stdio.h>";
+    print_endline (String.concat "\n" (map print_decl ds));
+
+
 
 

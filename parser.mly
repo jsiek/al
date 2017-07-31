@@ -67,6 +67,8 @@ exception ParseError
 %token <Support.Error.info> NOT
 %token <Support.Error.info> AND
 %token <Support.Error.info> OR
+%token <Support.Error.info> LET
+%token <Support.Error.info> IN
 %token <Support.Error.info> IF
 %token <Support.Error.info> THEN
 %token <Support.Error.info> ELSE
@@ -76,7 +78,6 @@ exception ParseError
 %token <Support.Error.info> MULT
 %token <Support.Error.info> DIV
 %token <Support.Error.info> ARRAY
-%token <Support.Error.info> ASSIGN
 %token <Support.Error.info> COLON
 %token <Support.Error.info> SEMICOLON
 %token <Support.Error.info> ARROW
@@ -90,13 +91,13 @@ exception ParseError
 %right ARROW DUBARROW
 %nonassoc INT LPAREN NAME 
 %start main             /* the entry point */
-%type <Ast.decl list * Ast.expr> main
+%type <Ast.decl list> main
 %type <Ast.expr> expr
 %type <Ast.decl> decl
 %type <Ast.ty> typ
   %%
 main:
-  decl_list expr EOF         { ($1,$2) }
+  decl_list EOF         { $1 }
   ;
 
 typ:
@@ -119,7 +120,8 @@ name_typ:
   NAME COLON typ                       { ($1.v,$3) }
 ;
 name_typ_list:
-  name_typ                            { [$1] }
+                                     { [] }
+| name_typ                           { [$1] }
 | name_typ COMMA name_typ_list       { $1::$3 }
 ;
 simple_expr:
@@ -136,12 +138,13 @@ simple_expr:
 | STRUCT NAME LBRACE member_list RBRACE { StructE ($1, $2.v, $4) }
 | UNION NAME LBRACE member RBRACE  { UnionE ($1, $2.v, $4) }
 | CASE expr OF case_list           { CaseE ($1, $2, $4) }
-| NAME ASSIGN expr SEMICOLON expr  { LetE ($1.i, $1.v, $3, $5) }
+| LET NAME EQUAL expr IN expr   { LetE ($1, $2.v, $4, $6) }
 ;
 expr:
   simple_expr LPAREN expr_list RPAREN       { AppE ($2, $1, $3) }
 | simple_expr LBRACK expr RBRACK            { IndexE ($2, $1, $3) }
 | simple_expr DOT NAME                      { MemberE ($2, $1, $3.v) }
+| simple_expr { $1 }
 ;
 expr_list:
   expr { [$1] }
@@ -158,12 +161,15 @@ member:
   NAME EQUAL expr { ($1.v,$3) }
 ;
 member_list:
- member                    { [$1] }
+                           { [] }
+| member                   { [$1] }
 | member COMMA member_list { $1::$3 } 
 ;
 decl:
-LAMBDA NAME LPAREN name_typ_list RPAREN typ COLON expr
+LAMBDA NAME LPAREN name_typ_list RPAREN typ EQUAL expr
   { FunD ($1, $2.v, $4, $6, $8) }
+| STRUCT NAME LBRACE name_typ_list RBRACE
+  { StructD ($1, $2.v, $4) }
 ;
 decl_list:
   decl { [$1] }

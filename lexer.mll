@@ -44,7 +44,6 @@ let reservedWords = [
   ("if", fun i -> IF i);
   ("then", fun i -> THEN i);
   ("else", fun i -> ELSE i);
-  (":=", fun i -> ASSIGN i);
   ("(", fun i -> LPAREN i);  
   (")", fun i -> RPAREN i);  
   ("[", fun i -> LBRACK i);  
@@ -54,6 +53,9 @@ let reservedWords = [
   ("<", fun i -> LT i);  
   (">", fun i -> GT i);  
   (":", fun i -> COLON i);  
+  (";", fun i -> SEMICOLON i);  
+  ("let", fun i -> LET i);  
+  ("in", fun i -> IN i);  
   (".", fun i -> DOT i);  
   (",", fun i -> COMMA i);  
   ("&", fun i -> AMP i);  
@@ -61,6 +63,7 @@ let reservedWords = [
   ("not", fun i -> NOT i);  
   ("and", fun i -> AND i);  
   ("or", fun i -> OR i);  
+  ("=", fun i -> EQUAL i);  
   ("+", fun i -> PLUS i);  
   ("-", fun i -> MINUS i);  
   ("*", fun i -> MULT i);  

@@ -96,6 +96,8 @@ let rec print_expr e =
     | IfE (i, cnd, thn, els) ->
       sprintf "if %s then %s else %s" (print_expr cnd) (print_expr thn)
         (print_expr els)
+    | LetE (i, x, rhs, body) ->
+      sprintf "%s := %s; %s" x (print_expr rhs) (print_expr body)
 
 and print_member (f,e) =
       sprintf "%s=%s" f (print_expr e)
@@ -128,6 +130,7 @@ let get_expr_info e =
     | StructE (i, _, _)
     | UnionE (i, _, _)
     | IfE (i, _, _, _)
+    | LetE (i, _, _, _)
     -> i
 
 let rec type_vars t =
