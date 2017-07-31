@@ -16,6 +16,8 @@ type ty =
   | StructT of info * string
   | UnionT of info * string
 
+type tyenv = (string * ty) list
+                       
 type expr =
   | VarE of info * string
   | IntE of info * int
@@ -24,8 +26,8 @@ type expr =
   | FloatE of info * float
   | ArrayE of info * expr * expr     (* Array creation *)
   | IndexE of info * expr * expr     (* Indexing into an array *)
-  | LetE of info * string * expr * expr
-  | LamE of info * (string * ty) list * expr
+  | LetE of info * string * ty option * expr * expr
+  | LamE of info * tyenv * expr
   | AppE of info * expr * expr list
   | PrimAppE of info * string * expr list
   | AbsE of info * string list * expr
@@ -96,7 +98,7 @@ let rec print_expr e =
     | IfE (i, cnd, thn, els) ->
       sprintf "if %s then %s else %s" (print_expr cnd) (print_expr thn)
         (print_expr els)
-    | LetE (i, x, rhs, body) ->
+    | LetE (i, x, opt, rhs, body) ->
       sprintf "%s := %s; %s" x (print_expr rhs) (print_expr body)
 
 and print_member (f,e) =
@@ -130,7 +132,7 @@ let get_expr_info e =
     | StructE (i, _, _)
     | UnionE (i, _, _)
     | IfE (i, _, _, _)
-    | LetE (i, _, _, _)
+    | LetE (i, _, _, _, _)
     -> i
 
 let rec type_vars t =

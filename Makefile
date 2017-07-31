@@ -22,6 +22,7 @@ MLSOURCES	= list_set.ml \
 		  $(YSOURCES) $(LSOURCES) \
 		  parser_misc.ml \
 		  cir.ml \
+		  typecheck.ml \
 		  lower.ml
 
 MLOBJECTS	= $(MLSOURCES:.ml=.$(MLC_OUT)) 
