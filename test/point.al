@@ -3,4 +3,4 @@ struct point {
 }
 
 fun main() int =
-  struct point{x=42,y=5}.x
+  struct point{x=42,y=0}.y

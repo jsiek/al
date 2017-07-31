@@ -1,3 +1,3 @@
 fun main() int =
-  x = 42;
+  x = 0;
   x

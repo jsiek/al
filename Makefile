@@ -28,16 +28,17 @@ MLSOURCES	= list_set.ml \
 MLOBJECTS	= $(MLSOURCES:.ml=.$(MLC_OUT)) 
 MLHDROBJ	= $(MLHEADERS:.mli=.cmi)
 
-TESTS		= test/app-clash.gtl \
-		  test/app-clash2.gtl
+TESTS		= test/int0.al \
+		  test/point.al \
+		  test/let.al
 
-TESTS_OUT	= $(TESTS:.gtl=.out)
+TESTS_OUT	= $(TESTS:.al=.out)
 
 
 EXAMPLES	= 
 
 
-.SUFFIXES: .ml .mll .mly .mli .cmo .cmx .cmi .o .exe .prof .ok .dot .ps .pdf .mlo .out .gtl
+.SUFFIXES: .ml .mll .mly .mli .cmo .cmx .cmi .o .exe .prof .ok .dot .ps .pdf .mlo .out .gtl .al
 
 SRC_PROF = $(MLSOURCES:.ml=.prof)
 
@@ -59,16 +60,21 @@ SRC_PROF = $(MLSOURCES:.ml=.prof)
 .ml.prof:
 	ocamlprof $< > $*.prof
 
-.gtl.out:
-	./gtlc $*.gtl > $*.out
-	diff -w -B $*.expected $*.out
+.al.out:
+	./main $*.al > $*.c
+	gcc $*.c
+	./a.out
+	if [ $$? -ne 0 ] ; then \
+		exit $rc; \
+	else \
+		touch $*.out; \
+	fi;
 
 
 default: main
 
-tests: main
-	./gtlc test/app-no-clash.gtl
-	./gtlc test/dyn-bind.gtl
+tests: main $(TESTS_OUT)
+
 
 OCAMLLIB 	= `$(MLC) -where`
 

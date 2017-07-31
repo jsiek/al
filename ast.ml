@@ -99,7 +99,7 @@ let rec print_expr e =
       sprintf "if %s then %s else %s" (print_expr cnd) (print_expr thn)
         (print_expr els)
     | LetE (i, x, opt, rhs, body) ->
-      sprintf "%s := %s; %s" x (print_expr rhs) (print_expr body)
+      sprintf "%s = %s;\n%s" x (print_expr rhs) (print_expr body)
 
 and print_member (f,e) =
       sprintf "%s=%s" f (print_expr e)
