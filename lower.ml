@@ -1,6 +1,7 @@
 open Ast
 open List
 open Printf
+open Support.Error
 
 let rec lower_type t =
   match t with
@@ -16,32 +17,61 @@ let rec lower_type t =
 
 let rec lower_expr e =
   match e with
-  | VarE (i,x) -> Cir.VarE (i,x)
-  | IntE (i,n) -> Cir.IntE (i,n)
-  | BoolE (i,b) -> if b then Cir.IntE (i,1) else Cir.IntE (i,0)
-  | StringE (i,s) -> Cir.IntE (i,0) (* FIX ME *)
-  | FloatE (i,f) -> Cir.FloatE (i,f)
-  | ArrayE (i,len,ini) -> Cir.IntE (i,0) (* FIX ME *)
-  | IndexE (i,arr,ind) -> Cir.IndexE (i, lower_expr arr, lower_expr ind)
-  | LetE (i, x, rhs, body) -> Cir.IntE (i, 0) (* FIX ME *)
+  | VarE (i,x) -> ([], [], Cir.VarE (i,x))
+  | IntE (i,n) -> ([], [], Cir.IntE (i,n))
+  | BoolE (i,b) ->
+     if b then
+       ([], [], Cir.IntE (i,1))
+     else
+       ([], [], Cir.IntE (i,0))
+  | IndexE (i,arr,ind) ->
+     let (ss1, l1, arr) = lower_expr arr in
+     let (ss2, l2, ind) = lower_expr ind in
+     (ss1 @ ss2, l1@l2, Cir.IndexE (i, arr, ind))
+  | LetE (i, x, None, rhs, body) ->
+     error i "type of RHS of let wasn't deduced"
+  | LetE (i, x, Some t, rhs, body) ->
+     let (ss1, l1, rhs) = lower_expr rhs in
+     let (ss2, l2, body) = lower_expr body in
+     (ss1 @ [Cir.AssignS (i, Cir.VarE (i, x), rhs)] @ ss2,
+      (x,t)::(l1 @ l2),
+      body)
   | AppE (i, rator, rands) ->
-    Cir.AppE (i, lower_expr rator, map lower_expr rands)
+     let (ss1, l1, rator) = lower_expr rator in
+     let (ss2, l2, rands) = lower_expr_list rands in
+     (ss1@ss2, l1@l2, Cir.AppE (i, rator, rands))
   | PrimAppE (i, opr, rands) ->
-    Cir.PrimAppE (i, opr, map lower_expr rands)
+     let (ss,ls, rands) = lower_expr_list rands in
+     (ss, ls, Cir.PrimAppE (i, opr, rands))
   | StructE (i, n, ms) ->
-    Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n),
-             (map (fun (n,e) -> lower_expr e) ms))
+     let (ss,ls, mems) = lower_expr_list (map (fun (n,e) -> e) ms) in
+     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n), mems))
   | UnionE (i, n, (tag, e)) ->
-    Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n),
-             [Cir.VarE (i, tag); lower_expr e])
+     let (ss,ls,e) = lower_expr e in
+     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n),
+                   [Cir.VarE (i, tag); e]))
   | MemberE (i, e, m) ->
-    Cir.MemberE (i, Cir.DerefE (i, lower_expr e), m)
+     let (ss,ls,e) = lower_expr e in
+     (ss, ls, Cir.MemberE (i, Cir.DerefE (i, e), m))
+  | _ ->
+     error (get_expr_info e)
+           (sprintf "lower_expr: unhandled expression %s" (print_expr e))
 
+and lower_expr_list es =
+  fold_left
+    (fun (ss',ls', es') e ->
+      let (ss, ls, e) = lower_expr e in
+      (ss' @ ss, ls' @ ls, es'@[e]))
+    ([], [], [])
+    es   
+                
 let rec lower_decl d =
   match d with
     FunD (i, f, ps, rt, e) ->
-     [Cir.FunD (i, f, lower_tyenv ps, lower_type rt,
-               [], [Cir.ReturnS (i, lower_expr e)])]
+    let (ss, ls, e) = lower_expr e in
+    let ls = map (fun (n,t) -> (n, lower_type t)) ls in 
+    [Cir.FunD (i, f, lower_tyenv ps, lower_type rt,
+               ls, ss @ [Cir.ReturnS (i, e)])]
   | StructD (i, name, ms) ->
     let ms = lower_tyenv ms in
       [Cir.StructD (i, name, ms)]

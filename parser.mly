@@ -150,7 +150,7 @@ simple_expr:
 | STRUCT NAME LBRACE member_list RBRACE { StructE ($1, $2.v, $4) }
 | UNION NAME LBRACE member RBRACE  { UnionE ($1, $2.v, $4) }
 | CASE expr OF case_list           { CaseE ($1, $2, $4) }
-| LET NAME EQUAL expr IN expr   { LetE ($1, $2.v, $4, $6) }
+| NAME EQUAL expr SEMICOLON expr   { LetE ($1.i, $1.v, None, $3, $5) }
 ;
 expr:
   simple_expr LPAREN expr_list RPAREN       { AppE ($2, $1, $3) }
