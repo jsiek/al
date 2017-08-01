@@ -4,6 +4,8 @@ open Printf
 open List
 open Ast
 
+let bin_arith = ["add"; "sub"; "mult"; "div"; "mod" ]
+
 let rec typecheck e env structs =
   match e with
     VarE (i,x) ->
@@ -14,6 +16,17 @@ let rec typecheck e env structs =
   | BoolE (i,b) -> (e, BoolT i)
   | StringE (i,s) -> (e, StringT i)
   | FloatE (i,f) -> (e, FloatT i)
+  | PrimAppE (i, opr, es) ->
+     let (es, ts) = typecheck_expr_list env structs es  in
+     if mem opr bin_arith then
+       (match ts with
+          [IntT _; IntT _] ->
+          (PrimAppE (i, opr, es), IntT i)
+        | _ ->
+           error i "arithmetic primitive requires integer argument")
+     else
+       error i (sprintf "unhandled primitive %s" opr)
+     
   | ArrayE (i, len, ini) ->
      let (len, len_t) = typecheck len env structs and
          (ini, ini_t) = typecheck ini env structs in
@@ -76,6 +89,14 @@ and typecheck_mems ms env structs =
      let ms = typecheck_mems ms env structs in
      let (e,t) = typecheck e env structs in
      (m,e)::ms
+
+and typecheck_expr_list env structs es =
+  match es with
+  | [] -> ([], [])
+  | e::es ->
+     let (e,t) = typecheck e env structs in
+     let (es,ts) = typecheck_expr_list env structs es in
+     (e::es, t::ts)
 
 type structenv = (string * tyenv) list
               

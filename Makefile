@@ -29,6 +29,8 @@ MLOBJECTS	= $(MLSOURCES:.ml=.$(MLC_OUT))
 MLHDROBJ	= $(MLHEADERS:.mli=.cmi)
 
 TESTS		= test/int0.al \
+		  test/add0.al \
+		  test/sub0.al \
 		  test/point.al \
 		  test/let.al
 

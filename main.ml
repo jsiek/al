@@ -54,6 +54,7 @@ let _ =
     print_endline "#define mod(e1,e2) ((e1)%(e2))";
     print_endline "#define and(e1,e2) ((e1)&&(e2))";
     print_endline "#define or(e1,e2) ((e1)||(e2))";
+    print_newline();
     print_endline (String.concat "\n" (map print_decl ds));
 
 
