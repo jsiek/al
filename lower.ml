@@ -2,6 +2,7 @@ open Ast
 open List
 open Printf
 open Support.Error
+open Support.Pervasive
 
 let rec lower_type t =
   match t with
@@ -14,6 +15,8 @@ let rec lower_type t =
   | ArrowT (i, ps, rt) -> Cir.FunPtrT (i, map lower_type ps, lower_type rt)
   | StructT (i, n) -> Cir.PtrT (i, Cir.StructT (i, n))
   | UnionT (i, n) -> Cir.PtrT (i, Cir.StructT (i, n))
+
+let lower_tyenv xts = map (fun (n,t) -> (n, lower_type t)) xts 
 
 let rec lower_expr e =
   match e with
@@ -43,9 +46,9 @@ let rec lower_expr e =
   | PrimAppE (i, opr, rands) ->
      let (ss,ls, rands) = lower_expr_list rands in
      (ss, ls, Cir.PrimAppE (i, opr, rands))
-  | StructE (i, n, ms) ->
+  | StructE (i, name, ms) ->
      let (ss,ls, mems) = lower_expr_list (map (fun (n,e) -> e) ms) in
-     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n), mems))
+     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" name), mems))
   | UnionE (i, n, (tag, e)) ->
      let (ss,ls,e) = lower_expr e in
      (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n),
@@ -53,6 +56,15 @@ let rec lower_expr e =
   | MemberE (i, e, m) ->
      let (ss,ls,e) = lower_expr e in
      (ss, ls, Cir.MemberE (i, Cir.DerefE (i, e), m))
+  | CaseE (i, e, cs) ->
+     let (ss,ls,e) = lower_expr e in
+     let ret = uniquify_name "tmp" in
+     let disc = uniquify_name "tmp" in
+     let cs = lower_cases i disc cs ret in
+     (ss @ [Cir.AssignS (i, Cir.VarE (i, disc), e);
+            Cir.SwitchS (i, Cir.VarE (i, disc), cs)],
+      ls, 
+      Cir.VarE (i, ret))
   | _ ->
      error (get_expr_info e)
            (sprintf "lower_expr: unhandled expression %s" (print_expr e))
@@ -64,7 +76,18 @@ and lower_expr_list es =
       (ss' @ ss, ls' @ ls, es'@[e]))
     ([], [], [])
     es   
-                
+
+and lower_cases i disc cs ret =
+  map (fun (f,x,e) ->
+        let (ss,ls,e) = lower_expr e in
+        let ls = lower_tyenv ls in
+        (f, Cir.BlockS (i, ls, [Cir.AssignS (i, Cir.VarE (i, x),
+                                             Cir.MemberE (i, Cir.MemberE (i, Cir.VarE (i, disc), "u"),
+                                                          f))]
+                               @ ss
+                               @ [Cir.AssignS (i, Cir.VarE (i,ret), e)]))
+      ) cs
+      
 let rec lower_decl d =
   match d with
     FunD (i, f, ps, rt, e) ->
@@ -100,9 +123,37 @@ let rec lower_decl d =
 		 [("tmp", Cir.PtrT (i, Cir.StructT (i,name)))],
 		 [alloc] @ inits @ [Cir.ReturnS (i, Cir.VarE (i, "tmp"))]
 		 )]
-  | UnionD (i, n, ms) -> []
+  | UnionD (i, name, ms) -> 
+     let ms = lower_tyenv ms in
+     [Cir.UnionD (i, name, ms)]
+     @
+       (* We generate a "constructor" for each field in the union.
+       name* make_name_field(t field) {
+        name* tmp;
+        tmp = (name* )malloc(sizeof(name));
+        ( *tmp ).tag = tag_field;
+        ( *tmp ).u.field = field;
+        return tmp;
+       }
+        *)
+       let make_cons (field, field_t) = 
+         let alloc = 
+           Cir.AssignS (i, Cir.VarE (i, "tmp"),
+                        Cir.PrimAppE (i, "malloc", 
+                                      [Cir.PrimAppE (i, "sizeof", [Cir.VarE (i, name)])])) in
+         let init_tag = Cir.AssignS (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, "tmp")), "tag"),
+                                     Cir.VarE (i, "tag_field")) in
+         let init_field = Cir.AssignS (i, Cir.MemberE (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, "tmp")), "u"), field),
+                                       Cir.VarE (i, field)) in
+         [Cir.FunD (i, sprintf "make_%s_%s" name field, 
+		    [(field,field_t)],
+		    Cir.PtrT (i, Cir.StructT (i,name)),
+		    [("tmp", Cir.PtrT (i, Cir.StructT (i,name)))],
+		    [alloc; init_tag; init_field; Cir.ReturnS (i, Cir.VarE (i, "tmp"))])] in
+       List.concat (map make_cons ms)
+  | _ -> error UNKNOWN "lower_decl: unhandled declaration"       
 
-and lower_tyenv xts = map (fun (n,t) -> (n, lower_type t)) xts 
+
 
 let lower_program ds =
    List.concat (map lower_decl ds)

@@ -34,7 +34,7 @@ type expr =
   | StructE of info * string * (string * expr) list
   | UnionE of info * string * (string * expr)
   | MemberE of info * expr * string  (* struct field access *)
-  | CaseE of info * expr * (string * expr) list (* Case on union *)
+  | CaseE of info * expr * (string * string * expr) list (* Case on union *)
   | IfE of info * expr * expr * expr
 
 type decl =
@@ -104,8 +104,8 @@ let rec print_expr e =
 and print_member (f,e) =
       sprintf "%s=%s" f (print_expr e)
 
-and print_case (f,e) =
-      sprintf "%s=>%s" f (print_expr e)
+and print_case (f,x,e) =
+      sprintf "%s %s => %s" f x (print_expr e)
 
 let get_info t = 
   (match t with

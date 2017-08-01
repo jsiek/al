@@ -28,7 +28,7 @@ type stmt =
    | AssignS of info * expr * expr
    | ReturnS of info * expr
    | IfS of info * expr * stmt * stmt
-   | BlockS of info * stmt list
+   | BlockS of info * (string * ty) list * stmt list
    | SwitchS of info * expr * (string * stmt) list
 
 type decl =
@@ -70,6 +70,9 @@ let rec print_expr e =
     | DerefE (i, e) ->
       sprintf "(*%s)" (print_expr e)
 
+let print_var_decl (n,t) =
+   sprintf "%s %s;" (print_ty t) n
+
 let rec print_stmt s =
   match s with
     | AssignS (i, lhs, rhs) ->
@@ -79,8 +82,10 @@ let rec print_stmt s =
     | IfS (i, cnd, thn, els) ->
        sprintf "if (%s)\n%s\nelse\n%s" (print_expr cnd) (print_stmt thn)
          (print_stmt els)
-    | BlockS (i, ss) ->
-       sprintf "{\n%s\n}" (String.concat "\n" (map print_stmt ss))
+    | BlockS (i, ls, ss) ->
+       sprintf "{\n%s\n%s\n}"
+       (String.concat "\n" (map print_var_decl ls))
+       (String.concat "\n" (map print_stmt ss))
     | SwitchS (i, e, cs) ->
        sprintf "switch (%s) {\n%s\n}" (print_expr e) 
          (String.concat "\n" (map print_case cs))
@@ -91,9 +96,6 @@ and print_case (n,s) =
 let print_param (n,t) =
    sprintf "%s %s" (print_ty t) n
 
-let print_var_decl (n,t) =
-   sprintf "%s %s;" (print_ty t) n
-
 let print_decl d =
   match d with
   | FunD (i, f, ps, rt, locals, body) ->
@@ -101,14 +103,14 @@ let print_decl d =
         (String.concat ", " (map print_param ps))
         (String.concat "\n" (map print_var_decl locals))
         (String.concat "\n" (map print_stmt body))
-  | StructD (i, n, fs) ->
+  | StructD (i, name, fs) ->
     sprintf "typedef struct {\n%s\n} %s;" 
       (String.concat "\n" (map print_var_decl fs)) 
-      n
-  | UnionD (i, n, fs) ->
-    let enum = sprintf "enum %s_tag { %s };" n
+      name
+  | UnionD (i, name, fs) ->
+    let enum = sprintf "enum %s_tag { %s };" name
       (String.concat ", " (map (fun (n,t) -> sprintf "tag_%s" n) fs)) in
-    let strct = sprintf "struct %s {\n %s_tag tag; union { %s } u; \n};" n n
-      (String.concat "\n" (map print_var_decl fs)) in
+    let strct = sprintf "typedef struct {\n %s_tag tag; union { %s } u; \n} %s ;" name
+      (String.concat "\n" (map print_var_decl fs)) name in
     String.concat "\n" [enum;strct]
 

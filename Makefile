@@ -35,8 +35,9 @@ TESTS		= test/int0.al \
 		  test/mul0.al \
 		  test/div0.al \
 		  test/mod0.al \
+		  test/let.al \
 		  test/point.al \
-		  test/let.al
+		  test/option.al 
 
 TESTS_OUT	= $(TESTS:.al=.out)
 
@@ -91,7 +92,7 @@ parser.$(MLC_OUT): support.$(MLC_OUT) parser.cmi
 prof: $(SRC_PROF)
 
 testclean:
-	rm -f test/*.out
+	rm -f test/*.out test/*.c
 
 clean: testclean
 	rm -rf g *.cmo *.cmx *.mli d *.cmi parser.ml lexer.ml *~ *.output *.ps *.dot *.pdf *.ps main 

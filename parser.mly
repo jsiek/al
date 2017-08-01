@@ -163,7 +163,7 @@ expr_list:
 | expr COMMA expr_list { $1::$3 }
 ;
 case:
-  NAME DUBARROW expr { ($1.v,$3) }
+  NAME NAME DUBARROW expr { ($1.v,$2.v,$4) }
 ;
 case_list:
   case { [$1] }
@@ -182,6 +182,8 @@ LAMBDA NAME LPAREN name_typ_list RPAREN typ EQUAL expr
   { FunD ($1, $2.v, $4, $6, $8) }
 | STRUCT NAME LBRACE name_typ_list RBRACE
   { StructD ($1, $2.v, $4) }
+| UNION NAME LBRACE name_typ_list RBRACE
+  { UnionD ($1, $2.v, $4) }
 ;
 decl_list:
   decl { [$1] }
