@@ -77,6 +77,7 @@ exception ParseError
 %token <Support.Error.info> MINUS
 %token <Support.Error.info> MULT
 %token <Support.Error.info> DIV
+%token <Support.Error.info> MOD
 %token <Support.Error.info> ARRAY
 %token <Support.Error.info> COLON
 %token <Support.Error.info> SEMICOLON
@@ -88,8 +89,11 @@ exception ParseError
 %nonassoc simple_prec
 %nonassoc LAMBDA DOT COMMA
 %left COLON SEMICOLON
-%right ARROW DUBARROW
 %nonassoc INT LPAREN NAME 
+%left PLUS MINUS        /* lowest precedence */
+%left TIMES DIV         /* medium precedence */
+%nonassoc UMINUS        /* highest precedence */
+%right ARROW DUBARROW
 %start main             /* the entry point */
 %type <Ast.decl list> main
 %type <Ast.expr> expr
@@ -134,6 +138,14 @@ simple_expr:
 | LPAREN expr RPAREN               { $2 }
 | ARRAY expr LBRACK expr RBRACK    { ArrayE ($1, $2, $4) }
 | NOT expr                         { PrimAppE ($1, "not", [$2]) }
+| MINUS expr %prec UMINUS          { PrimAppE ($1, "neg", [$2]) }
+| expr PLUS expr                   { PrimAppE ($2, "add", [$1;$3]) }
+| expr MINUS expr                  { PrimAppE ($2, "sub", [$1;$3]) }
+| expr MULT expr                   { PrimAppE ($2, "mult", [$1;$3]) }
+| expr DIV expr                    { PrimAppE ($2, "div", [$1;$3]) }
+| expr MOD expr                    { PrimAppE ($2, "mod", [$1;$3]) }
+| expr AND expr                    { PrimAppE ($2, "and", [$1;$3]) }
+| expr OR expr                     { PrimAppE ($2, "or", [$1;$3]) }
 | LAMBDA name_typ_list DOT expr    { LamE ($1, $2, $4) }
 | STRUCT NAME LBRACE member_list RBRACE { StructE ($1, $2.v, $4) }
 | UNION NAME LBRACE member RBRACE  { UnionE ($1, $2.v, $4) }

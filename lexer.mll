@@ -68,6 +68,7 @@ let reservedWords = [
   ("-", fun i -> MINUS i);  
   ("*", fun i -> MULT i);  
   ("/", fun i -> DIV i);
+  ("mod", fun i -> MOD i);
   ("->", fun i -> ARROW i);
   ("=>", fun i -> DUBARROW i);
 ]
