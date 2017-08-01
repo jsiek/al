@@ -4,7 +4,10 @@ open Printf
 open List
 open Ast
 
-let bin_arith = ["add"; "sub"; "mult"; "div"; "mod" ]
+let bin_arith = ["add"; "sub"; "mul"; "div"; "mod" ]
+let una_arith = ["neg"]
+let bin_logic = ["and"; "or"]
+let una_logic = ["not"]
 
 let rec typecheck e env structs =
   match e with
@@ -24,6 +27,24 @@ let rec typecheck e env structs =
           (PrimAppE (i, opr, es), IntT i)
         | _ ->
            error i "arithmetic primitive requires integer argument")
+     else if mem opr una_arith then
+       (match ts with
+          [IntT _] ->
+          (PrimAppE (i, opr, es), IntT i)
+        | _ -> 
+           error i "arithmetic primitive requires integer argument")
+     else if mem opr bin_logic then
+       (match ts with
+          [BoolT _; BoolT _] ->
+          (PrimAppE (i, opr, es), BoolT i)
+        | _ ->
+           error i "logical primitive requires bool argument")
+     else if mem opr una_logic then
+       (match ts with
+          [BoolT _] ->
+          (PrimAppE (i, opr, es), BoolT i)
+        | _ -> 
+           error i "logical primitive requires bool argument")
      else
        error i (sprintf "unhandled primitive %s" opr)
      

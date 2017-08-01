@@ -31,6 +31,10 @@ MLHDROBJ	= $(MLHEADERS:.mli=.cmi)
 TESTS		= test/int0.al \
 		  test/add0.al \
 		  test/sub0.al \
+		  test/neg0.al \
+		  test/mul0.al \
+		  test/div0.al \
+		  test/mod0.al \
 		  test/point.al \
 		  test/let.al
 

@@ -141,7 +141,7 @@ simple_expr:
 | MINUS expr %prec UMINUS          { PrimAppE ($1, "neg", [$2]) }
 | expr PLUS expr                   { PrimAppE ($2, "add", [$1;$3]) }
 | expr MINUS expr                  { PrimAppE ($2, "sub", [$1;$3]) }
-| expr MULT expr                   { PrimAppE ($2, "mult", [$1;$3]) }
+| expr MULT expr                   { PrimAppE ($2, "mul", [$1;$3]) }
 | expr DIV expr                    { PrimAppE ($2, "div", [$1;$3]) }
 | expr MOD expr                    { PrimAppE ($2, "mod", [$1;$3]) }
 | expr AND expr                    { PrimAppE ($2, "and", [$1;$3]) }
