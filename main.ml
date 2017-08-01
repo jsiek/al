@@ -43,6 +43,14 @@ let _ =
   let ds = lower_program p in
     print_endline "#include <stdlib.h>";
     print_endline "#include <stdio.h>";
+    print_endline "#define not(e) !e";
+    print_endline "#define add(e1,e2) ((e1)+(e2))";
+    print_endline "#define sub(e1,e2) ((e1)-(e2))";
+    print_endline "#define mul(e1,e2) ((e1)*(e2))";
+    print_endline "#define div(e1,e2) ((e1)/(e2))";
+    print_endline "#define mod(e1,e2) ((e1)%(e2))";
+    print_endline "#define and(e1,e2) ((e1)&&(e2))";
+    print_endline "#define or(e1,e2) ((e1)||(e2))";
     print_endline (String.concat "\n" (map print_decl ds));
 
 
