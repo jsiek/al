@@ -50,6 +50,8 @@ let reservedWords = [
   ("]", fun i -> RBRACK i);  
   ("{", fun i -> LBRACE i);  
   ("}", fun i -> RBRACE i);  
+  ("=>", fun i -> DUBARROW i);
+  ("->", fun i -> ARROW i);
   ("<", fun i -> LT i);  
   (">", fun i -> GT i);  
   (":", fun i -> COLON i);  
@@ -69,8 +71,6 @@ let reservedWords = [
   ("*", fun i -> MULT i);  
   ("/", fun i -> DIV i);
   ("mod", fun i -> MOD i);
-  ("->", fun i -> ARROW i);
-  ("=>", fun i -> DUBARROW i);
 ]
 
 (* Support functions *)
@@ -168,6 +168,7 @@ rule main = parse
     { createID (info lexbuf) (text lexbuf) }
 
 | "->"
+| "=>"
 | "'"
 | "&"
 | "?"

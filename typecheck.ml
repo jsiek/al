@@ -129,6 +129,9 @@ let rec typecheck e env structs unions =
       | _ ->
          error i (sprintf "The condition of 'if' must be a Boolean, not %s" (print_ty cond_t)))
      
+  | CaseE (i, disc, cs) ->
+     error i "unimplemented"
+     
   | _ -> error (get_expr_info e)
                (sprintf "typecheck: unmatched %s" (print_expr e))
 
