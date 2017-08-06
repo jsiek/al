@@ -149,7 +149,7 @@ simple_expr:
 | LAMBDA name_typ_list DOT expr    { LamE ($1, $2, $4) }
 | STRUCT NAME LBRACE member_list RBRACE { StructE ($1, $2.v, $4) }
 | UNION NAME LBRACE member RBRACE  { UnionE ($1, $2.v, $4) }
-| CASE expr OF case_list           { CaseE ($1, $2, $4) }
+| CASE expr OF case_list           { CaseE ($1, $2, None, $4, None) }
 | NAME EQUAL expr SEMICOLON expr   { LetE ($1.i, $1.v, None, $3, $5) }
 ;
 expr:
@@ -163,7 +163,7 @@ expr_list:
 | expr COMMA expr_list { $1::$3 }
 ;
 case:
-  NAME NAME DUBARROW expr { ($1.v,$2.v,$4) }
+  NAME NAME DUBARROW expr { ($1.v,$2.v,None,$4) }
 ;
 case_list:
   case { [$1] }

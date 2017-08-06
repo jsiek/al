@@ -51,19 +51,18 @@ let rec lower_expr e =
      (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" name), mems))
   | UnionE (i, n, (tag, e)) ->
      let (ss,ls,e) = lower_expr e in
-     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s" n),
-                   [Cir.VarE (i, tag); e]))
+     (ss, ls, Cir.AppE(i, Cir.VarE (i, sprintf "make_%s_%s" n tag), [e]))
   | MemberE (i, e, m) ->
      let (ss,ls,e) = lower_expr e in
      (ss, ls, Cir.MemberE (i, Cir.DerefE (i, e), m))
-  | CaseE (i, e, cs) ->
+  | CaseE (i, e, Some disc_t, cs, Some ret_t) ->
      let (ss,ls,e) = lower_expr e in
      let ret = uniquify_name "tmp" in
      let disc = uniquify_name "tmp" in
      let cs = lower_cases i disc cs ret in
      (ss @ [Cir.AssignS (i, Cir.VarE (i, disc), e);
-            Cir.SwitchS (i, Cir.VarE (i, disc), cs)],
-      ls, 
+            Cir.SwitchS (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, disc)), "tag"), cs)],
+      (disc,disc_t)::(ret,ret_t)::ls, 
       Cir.VarE (i, ret))
   | _ ->
      error (get_expr_info e)
@@ -78,14 +77,17 @@ and lower_expr_list es =
     es   
 
 and lower_cases i disc cs ret =
-  map (fun (f,x,e) ->
+  map (fun (f,x,Some x_t, e) ->
         let (ss,ls,e) = lower_expr e in
         let ls = lower_tyenv ls in
-        (f, Cir.BlockS (i, ls, [Cir.AssignS (i, Cir.VarE (i, x),
-                                             Cir.MemberE (i, Cir.MemberE (i, Cir.VarE (i, disc), "u"),
-                                                          f))]
-                               @ ss
-                               @ [Cir.AssignS (i, Cir.VarE (i,ret), e)]))
+        (sprintf "tag_%s" f, 
+         Cir.BlockS (i, (x, lower_type x_t)::ls,
+                     [Cir.AssignS (i, Cir.VarE (i, x),
+                                   Cir.MemberE (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, disc)),
+                                                                "u"),
+                                                f))]
+                     @ ss
+                     @ [Cir.AssignS (i, Cir.VarE (i,ret), e)]))
       ) cs
       
 let rec lower_decl d =
@@ -142,7 +144,7 @@ let rec lower_decl d =
                         Cir.PrimAppE (i, "malloc", 
                                       [Cir.PrimAppE (i, "sizeof", [Cir.VarE (i, name)])])) in
          let init_tag = Cir.AssignS (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, "tmp")), "tag"),
-                                     Cir.VarE (i, "tag_field")) in
+                                     Cir.VarE (i, sprintf "tag_%s" field)) in
          let init_field = Cir.AssignS (i, Cir.MemberE (i, Cir.MemberE (i, Cir.DerefE (i, Cir.VarE (i, "tmp")), "u"), field),
                                        Cir.VarE (i, field)) in
          [Cir.FunD (i, sprintf "make_%s_%s" name field, 

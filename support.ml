@@ -111,7 +111,7 @@ let make_id () = unique_id := !unique_id + 1; !unique_id
 
 
 let ununiquify_name n = 
-  let l = Str.split (Str.regexp "@") n in
+  let l = Str.split (Str.regexp "_") n in
     (match l with
        [] -> Error.error Error.UNKNOWN "ununiquify"
     | [n] -> n
@@ -119,7 +119,7 @@ let ununiquify_name n =
     | _ -> Error.error Error.UNKNOWN "ununiquify, to many parts")
 
 let split_name n = 
-  let l = Str.split (Str.regexp "@") n in
+  let l = Str.split (Str.regexp "_") n in
     (match l with
        [] -> Error.error Error.UNKNOWN "ununiquify"
     | [n] -> n
@@ -127,12 +127,12 @@ let split_name n =
     | _ -> Error.error Error.UNKNOWN "ununiquify, to many parts")
 
 let flatten_name n = 
-  let l = Str.split (Str.regexp "@") n in
+  let l = Str.split (Str.regexp "_") n in
     String.concat "_" l
       
 let uniquify_name n = 
   let n = split_name n in
-    Printf.sprintf "%s@%d" n (make_id ())
+    Printf.sprintf "%s_%d" n (make_id ())
 
 
 let clear_id () = unique_id := 0

@@ -34,7 +34,8 @@ type expr =
   | StructE of info * string * (string * expr) list
   | UnionE of info * string * (string * expr)
   | MemberE of info * expr * string  (* struct field access *)
-  | CaseE of info * expr * (string * string * expr) list (* Case on union *)
+  (* Case on union *)
+  | CaseE of info * expr * ty option * (string * string * ty option * expr) list * ty option
   | IfE of info * expr * expr * expr
 
 type decl =
@@ -92,7 +93,7 @@ let rec print_expr e =
       sprintf "%s.%s" (print_expr e) mem
     | UnionE (i, n, (f, e)) ->
       sprintf "union %s { %s=%s }" n f (print_expr e)
-    | CaseE (i, e, cs) ->
+    | CaseE (i, e, _, cs, _) ->
       sprintf "case %s of %s" (print_expr e) 
          (String.concat " | " (map print_case cs))
     | IfE (i, cnd, thn, els) ->
@@ -104,7 +105,7 @@ let rec print_expr e =
 and print_member (f,e) =
       sprintf "%s=%s" f (print_expr e)
 
-and print_case (f,x,e) =
+and print_case (f,x,_, e) =
       sprintf "%s %s => %s" f x (print_expr e)
 
 let get_info t = 
@@ -128,7 +129,7 @@ let get_expr_info e =
     | IndexE (i, _, _)
     | FloatE (i, _)
     | MemberE (i, _, _)
-    | CaseE (i, _, _)
+    | CaseE (i, _, _, _, _)
     | StructE (i, _, _)
     | UnionE (i, _, _)
     | IfE (i, _, _, _)

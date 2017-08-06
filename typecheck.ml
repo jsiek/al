@@ -129,11 +129,40 @@ let rec typecheck e env structs unions =
       | _ ->
          error i (sprintf "The condition of 'if' must be a Boolean, not %s" (print_ty cond_t)))
      
-  | CaseE (i, disc, cs) ->
-     error i "unimplemented"
-     
+  | CaseE (i, disc, disc_t, cs, ret_t) ->
+     let (disc, disc_t) = typecheck disc env structs unions in
+     (match disc_t with
+      | UnionT (_, name) ->
+         (try let ms = assoc name unions in
+              let (cs,t) = typecheck_cases i cs name ms env structs unions in
+              (CaseE (i, disc, Some disc_t, cs, Some t), t)
+          with Not_found ->
+               error i (sprintf "Internal error in 'case', undefined union %s" name))
+      | _ ->
+         error i (sprintf "In 'case', expected a union, not %s" (print_ty disc_t)))
   | _ -> error (get_expr_info e)
                (sprintf "typecheck: unmatched %s" (print_expr e))
+
+and typecheck_cases i cs name ms env structs unions =
+  match cs with
+  | [(f,x,_, e)] -> 
+     let (c,t) = typecheck_case i (f,x,None,e) name ms env structs unions in
+     ([c],t)
+  | (f,x,_, e)::cs ->
+     let (c,t1) = typecheck_case i (f,x,None,e) name ms env structs unions in
+     let (cs,t2) = typecheck_cases i cs name ms env structs unions in
+     if type_equal t1 t2 then
+       (c::cs, t1)
+     else
+       error i (sprintf "branches of case have different types, %s and %s" (print_ty t1) (print_ty t2))
+
+and typecheck_case i (f,x,_,e) name ms env structs unions =
+  try 
+    let t = assoc f ms in
+    let (e, et) = typecheck e ((x,t)::env) structs unions in
+    ((f,x,Some t,e), et)
+  with Not_found ->
+    error i (sprintf "There is no field named %s in the union %s" f name)
 
 and typecheck_mems ms env structs unions =
   match ms with

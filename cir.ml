@@ -110,7 +110,7 @@ let print_decl d =
   | UnionD (i, name, fs) ->
     let enum = sprintf "enum %s_tag { %s };" name
       (String.concat ", " (map (fun (n,t) -> sprintf "tag_%s" n) fs)) in
-    let strct = sprintf "typedef struct {\n %s_tag tag; union { %s } u; \n} %s ;" name
+    let strct = sprintf "typedef struct {\n enum %s_tag tag; union { %s } u; \n} %s ;" name
       (String.concat "\n" (map print_var_decl fs)) name in
     String.concat "\n" [enum;strct]
 
