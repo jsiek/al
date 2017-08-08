@@ -40,6 +40,7 @@ exception ParseError
 %token <Support.Error.info> INTTY
 %token <Support.Error.info> BOOLTY
 %token <Support.Error.info> FLOATTY
+%token <Support.Error.info> UNITTY
 %token <Support.Error.info> STRUCT
 %token <Support.Error.info> UNION
 %token <Support.Error.info> TRUE
@@ -109,6 +110,7 @@ typ:
 | INTTY                                { IntT $1 }
 | BOOLTY                               { BoolT $1 }
 | FLOATTY                              { FloatT $1 }
+| UNITTY                               { UnitT $1 }
 | LAMBDA typ_list ARROW typ            { ArrowT ($1, $2, $4) }
 | NAME                                 { VarT ($1.i, $1.v) }
 | STRUCT NAME                          { StructT ($1, $2.v) }

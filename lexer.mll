@@ -32,6 +32,7 @@ open Support.Error
 let reservedWords = [
   ("int", fun i -> INTTY i);
   ("bool", fun i -> BOOLTY i);
+  ("unit", fun i -> UNITTY i);
   ("fun", fun i -> LAMBDA i);
   ("case", fun i -> CASE i);
   ("of", fun i -> OF i);

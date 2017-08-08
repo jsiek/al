@@ -9,6 +9,7 @@ type ty =
   | BoolT of info
   | StringT of info
   | FloatT of info
+  | UnitT of info
   | ArrayT of info * ty
   | ArrowT of info * ty list * ty
   | InterT of info * ty * ty
